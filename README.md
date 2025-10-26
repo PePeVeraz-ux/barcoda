@@ -6,7 +6,7 @@ Tienda en línea moderna para la venta de figuras de acción coleccionables, con
 
 ### Para Usuarios
 - **Autenticación completa** con email/contraseña y Google OAuth
-- **Carrito de compras** persistente
+- **Carrito de compras** persbarcodaistente
 - **Catálogo de productos** con categorías y búsqueda
 - **Checkout con WhatsApp** para confirmar pedidos
 - **Diseño 100% responsivo** (mobile-first)
