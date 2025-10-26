@@ -13,11 +13,12 @@ Tienda en línea moderna para la venta de figuras de acción coleccionables, con
 - **Historial de órdenes**
 
 ### Para Administradores
-- **Panel de administración** intuitivo
-- **Dashboard con métricas** (productos, órdenes, ingresos, usuarios)
-- **CRUD completo de productos**
-- **Gestión de órdenes** con estados
-- **Rutas protegidas** por rol
+- 👨‍💼 **Panel de administración** intuitivo
+- 📊 **Dashboard con métricas** (productos, órdenes, ingresos, usuarios)
+- ➕ **CRUD completo de productos**
+- 📦 **Gestión de órdenes** con estados
+- 🔒 **Rutas protegidas** por rol
+- 📸 **Subida de imágenes** a Cloudflare R2 con preview
 
 ## Tecnologías
 
@@ -25,7 +26,8 @@ Tienda en línea moderna para la venta de figuras de acción coleccionables, con
 - **Frontend:** React 18 + TypeScript
 - **Estilos:** Tailwind CSS v4
 - **UI Components:** shadcn/ui + Radix UI
-- **Backend:** Supabase (PostgreSQL + Auth + Storage)
+- **Backend:** Supabase (PostgreSQL + Auth)
+- **Storage:** Cloudflare R2 + Workers
 - **Formularios:** React Hook Form + Zod
 - **Iconos:** Lucide React
 
@@ -34,6 +36,7 @@ Tienda en línea moderna para la venta de figuras de acción coleccionables, con
 - Node.js 18+ 
 - npm o pnpm
 - Cuenta de Supabase
+- Cuenta de Cloudflare (para R2 y Workers)
 - Número de WhatsApp Business (opcional)
 
 ## Instalación
@@ -64,6 +67,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
 
 # WhatsApp (formato: código_país + número sin espacios)
 NEXT_PUBLIC_WHATSAPP_NUMBER=5215512345678
+
+# Cloudflare R2 Worker
+NEXT_PUBLIC_CLOUDFLARE_WORKER_URL=https://tu-worker.workers.dev
 ```
 
 ### 4. Configurar Supabase
@@ -202,7 +208,49 @@ barcoda/
 - Ver todas las órdenes
 - Ver estadísticas de la tienda
 
-## Despliegue
+## ☁️ Configurar Cloudflare R2 (Almacenamiento de Imágenes)
+
+### 1. Crear Bucket R2
+
+1. Ve a tu dashboard de Cloudflare
+2. Navega a **R2 Object Storage**
+3. Crea un nuevo bucket (ej: `barcoda-images`)
+4. Configura el acceso público (opcional):
+   - Settings > Public Access
+   - Habilita "Allow Access"
+   - Copia el dominio público (ej: `https://pub-xxxxx.r2.dev`)
+
+### 2. Crear Worker para Upload
+
+1. Ve a **Workers & Pages**
+2. Crea un nuevo Worker
+3. Copia el código de `cloudflare-worker-example.js`
+4. Despliega el Worker
+
+### 3. Configurar Bindings
+
+1. En tu Worker, ve a **Settings > Variables**
+2. Agrega un **R2 Bucket Binding**:
+   - Variable name: `BARCODA_BUCKET`
+   - R2 bucket: Selecciona tu bucket
+
+### 4. Configurar Dominio del Worker
+
+1. Ve a **Triggers** en tu Worker
+2. Copia la URL del Worker (ej: `https://barcoda-api.pepeveras845.workers.dev`)
+3. Agrégala a tu `.env.local`:
+   ```env
+   NEXT_PUBLIC_CLOUDFLARE_WORKER_URL=https://tu-worker.workers.dev
+   ```
+
+### 5. Probar la Subida
+
+1. Ve a `/admin/products/new` en tu app
+2. Haz clic en "Subir Imagen"
+3. Selecciona una imagen
+4. Verifica que se suba correctamente
+
+## 🚀 Despliegue
 
 ### Vercel (Recomendado)
 

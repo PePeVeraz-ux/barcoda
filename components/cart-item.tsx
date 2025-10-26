@@ -42,7 +42,7 @@ export function CartItem({ item, cartId }: CartItemProps) {
       if (error) throw error
 
       setQuantity(newQuantity)
-      router.refresh()
+      // No usar router.refresh() para evitar que el navbar pierda estado
     } catch (error) {
       console.error("[v0] Error updating quantity:", error)
       toast({
@@ -67,7 +67,7 @@ export function CartItem({ item, cartId }: CartItemProps) {
         description: "El producto se eliminó del carrito",
       })
 
-      router.refresh()
+      // No usar router.refresh() para evitar que el navbar pierda estado
     } catch (error) {
       console.error("[v0] Error removing item:", error)
       toast({

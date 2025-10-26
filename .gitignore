@@ -45,3 +45,7 @@ Thumbs.db
 
 # Scripts SQL (contienen datos sensibles)
 /scripts
+
+# Cloudflare Worker
+/cloudflare-worker-example.js
+/cloudflare-worker-fixed.js

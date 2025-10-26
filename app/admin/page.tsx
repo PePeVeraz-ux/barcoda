@@ -34,11 +34,27 @@ export default async function AdminPage() {
 
   const { count: usersCount } = await supabase.from("profiles").select("*", { count: "exact", head: true })
 
+  // Obtener órdenes recientes de todos los usuarios
   const { data: recentOrders } = await supabase
     .from("orders")
-    .select("*, profiles(email)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(5)
+
+  // Obtener información de usuarios para las órdenes
+  let ordersWithUserInfo = recentOrders
+  if (recentOrders && recentOrders.length > 0) {
+    const userIds = [...new Set(recentOrders.map(order => order.user_id))]
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .in("id", userIds)
+    
+    ordersWithUserInfo = recentOrders.map(order => ({
+      ...order,
+      userEmail: `Usuario ${order.user_id.slice(0, 8)}`
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -127,20 +143,31 @@ export default async function AdminPage() {
               <CardTitle>Órdenes Recientes</CardTitle>
             </CardHeader>
             <CardContent>
-              {recentOrders && recentOrders.length > 0 ? (
+              {ordersWithUserInfo && ordersWithUserInfo.length > 0 ? (
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
+                  {ordersWithUserInfo.map((order) => (
                     <div key={order.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{order.profiles?.email}</p>
-                        <p className="text-xs text-muted-foreground">{order.status}</p>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{order.userEmail}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-muted-foreground capitalize">{order.status}</p>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(order.created_at).toLocaleDateString("es-ES")}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-bold">${Number(order.total).toFixed(2)}</p>
+                      <p className="text-sm font-bold text-primary">${Number(order.total).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No hay órdenes recientes</p>
+              )}
+              {ordersWithUserInfo && ordersWithUserInfo.length > 0 && (
+                <Button variant="outline" className="w-full mt-4 bg-transparent" asChild>
+                  <Link href="/admin/orders">Ver Todas las Órdenes</Link>
+                </Button>
               )}
             </CardContent>
           </Card>

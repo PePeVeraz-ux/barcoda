@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +16,21 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Action Figures Store - Figuras de Acción",
-  description: "La mejor tienda de figuras de acción coleccionables",
-    generator: 'v0.app'
+  title: "Barcoda Bazar - Figuras de Acción",
+  description: "La mejor tienda de figuras de acción coleccionables. Encuentra tus personajes favoritos de Marvel, DC, Star Wars y más.",
+  keywords: ["figuras de acción", "coleccionables", "marvel", "dc", "star wars", "anime"],
+  authors: [{ name: "Barcoda Bazar" }],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "Barcoda Bazar - Figuras de Acción",
+    description: "La mejor tienda de figuras de acción coleccionables",
+    type: "website",
+    images: ["/logo.png"],
+  },
 }
 
 export default function RootLayout({
@@ -26,10 +39,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

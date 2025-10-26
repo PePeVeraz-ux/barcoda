@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart, User, LogOut } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,21 +23,41 @@ export function Navbar() {
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
+  const checkUserRole = useCallback(async (userId: string) => {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", userId).single()
+    return profile?.role === "admin"
+  }, [supabase])
 
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-        const isAdminUser = profile?.role === "admin"
-        setIsAdmin(isAdminUser)
-        setIsLoading(false)
-      } else {
-        setIsAdmin(false)
-        setIsLoading(false)
+  useEffect(() => {
+    let mounted = true
+
+    const getUser = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        
+        if (!mounted) return
+        
+        setUser(user)
+
+        if (user) {
+          const isAdminUser = await checkUserRole(user.id)
+          if (mounted) {
+            setIsAdmin(isAdminUser)
+            setIsLoading(false)
+          }
+        } else {
+          if (mounted) {
+            setIsAdmin(false)
+            setIsLoading(false)
+          }
+        }
+      } catch (error) {
+        console.error("Error al obtener usuario:", error)
+        if (mounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -43,21 +65,35 @@ export function Navbar() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single()
-        const isAdminUser = profile?.role === "admin"
-        setIsAdmin(isAdminUser)
-        router.refresh()
+        const isAdminUser = await checkUserRole(session.user.id)
+        if (mounted) {
+          setIsAdmin(isAdminUser)
+          setIsLoading(false)
+        }
       } else {
-        setIsAdmin(false)
+        if (mounted) {
+          setIsAdmin(false)
+          setIsLoading(false)
+        }
+      }
+      
+      // Solo refrescar en eventos específicos
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        router.refresh()
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [supabase])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, checkUserRole])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -69,12 +105,16 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-slide-down">
       <div className="container flex h-14 md:h-16 items-center justify-between">
         <div className="flex items-center gap-4 md:gap-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-lg bg-primary transition-transform hover:scale-110">
-              <span className="text-base md:text-lg font-bold text-primary-foreground">AF</span>
-            </div>
-            <span className="text-lg md:text-xl font-bold hidden sm:inline">Action Figures</span>
-            <span className="text-lg md:text-xl font-bold sm:hidden">AF Store</span>
+          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
+            <Image
+              src="/logo.png"
+              alt="Barcoda Bazar Logo"
+              width={150}
+              height={150}
+              className="h-15 w-15 md:h-15 md:w-15"
+              priority
+            />
+            <span className="text-lg md:text-xl font-bold">Barcoda Bazar</span>
           </Link>
           <div className="hidden md:flex items-center gap-6">
             <Link href="/products" className="text-sm font-medium transition-colors hover:text-primary">
@@ -89,7 +129,9 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {user && (
+          <ThemeToggle />
+          
+          {!isLoading && user && (
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="transition-transform hover:scale-110">
                 <ShoppingCart className="h-5 w-5" />
@@ -97,7 +139,7 @@ export function Navbar() {
             </Link>
           )}
 
-          {user ? (
+          {!isLoading && user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="transition-transform hover:scale-110">
@@ -123,7 +165,9 @@ export function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
+          )}
+
+          {!isLoading && !user && (
             <div className="flex items-center gap-2">
               <Button variant="ghost" asChild className="hidden sm:flex">
                 <Link href="/auth/login">Iniciar Sesión</Link>

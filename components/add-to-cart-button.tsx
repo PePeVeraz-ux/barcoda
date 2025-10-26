@@ -77,7 +77,7 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
         description: "El producto se agregó a tu carrito",
       })
 
-      router.refresh()
+      // No usar router.refresh() para evitar que el navbar pierda estado
     } catch (error) {
       console.error("[v0] Error adding to cart:", error)
       toast({

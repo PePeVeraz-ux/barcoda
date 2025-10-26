@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import Image from "next/image"
+import { Upload, X, Loader2 } from "lucide-react"
 
 interface Category {
   id: string
@@ -43,57 +45,195 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [categoryId, setCategoryId] = useState(product?.category_id || "")
   const [stock, setStock] = useState(product?.stock?.toString() || "")
   const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null)
+  const [uploadProgress, setUploadProgress] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Por favor selecciona un archivo de imagen válido",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "La imagen no debe superar los 5MB",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setImageFile(file)
+      
+      // Crear preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setImageUrl("")
+  }
+
+  const uploadImageToCloudflare = async (file: File): Promise<string> => {
+    const workerUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_WORKER_URL
+    
+    console.log("🔧 Worker URL:", workerUrl)
+    
+    if (!workerUrl) {
+      throw new Error("URL del Worker de Cloudflare no configurada. Agrega NEXT_PUBLIC_CLOUDFLARE_WORKER_URL a tu .env.local")
+    }
+
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    console.log("📤 Enviando archivo:", {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    })
+
+    const response = await fetch(`${workerUrl}/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    console.log("📥 Respuesta del Worker:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        error: 'Error al subir imagen',
+        message: `HTTP ${response.status}: ${response.statusText}` 
+      }))
+      console.error("❌ Error del Worker:", errorData)
+      throw new Error(errorData.error || errorData.message || 'Error al subir imagen')
+    }
+
+    const data = await response.json()
+    console.log("✅ Respuesta exitosa del Worker:", data)
+    
+    if (!data.url) {
+      throw new Error("El Worker no devolvió una URL válida")
+    }
+    
+    return data.url // URL pública de la imagen en R2
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
+      let finalImageUrl = imageUrl
+
+      // Si hay una imagen nueva, subirla primero
+      if (imageFile) {
+        setUploadProgress(true)
+        console.log("📤 Subiendo imagen al bucket...")
+        try {
+          finalImageUrl = await uploadImageToCloudflare(imageFile)
+          console.log("✅ Imagen subida:", finalImageUrl)
+          toast({
+            title: "Imagen subida",
+            description: "La imagen se subió correctamente",
+          })
+        } catch (error) {
+          console.error("❌ Error al subir imagen:", error)
+          throw new Error(`Error al subir imagen: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+        } finally {
+          setUploadProgress(false)
+        }
+      }
+
+      console.log("💾 Guardando producto en Supabase...")
       const productData = {
         name,
         description: description || null,
         price: Number.parseFloat(price),
-        image_url: imageUrl || null,
+        image_url: finalImageUrl || null,
         category_id: categoryId || null,
         stock: Number.parseInt(stock),
       }
+      console.log("📦 Datos del producto:", productData)
 
       if (product) {
         // Update existing product
+        console.log("🔄 Actualizando producto existente...")
         const { error } = await supabase.from("products").update(productData).eq("id", product.id)
 
-        if (error) throw error
+        if (error) {
+          console.error("❌ Error de Supabase:", error)
+          throw error
+        }
 
+        console.log("✅ Producto actualizado")
         toast({
           title: "Producto actualizado",
           description: "El producto se actualizó correctamente",
         })
       } else {
         // Create new product
-        const { error } = await supabase.from("products").insert(productData)
+        console.log("➕ Creando nuevo producto...")
+        
+        // Agregar timeout para detectar si se congela
+        const insertPromise = supabase.from("products").insert(productData)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: La inserción tardó más de 10 segundos')), 10000)
+        )
+        
+        const { error, data } = await Promise.race([insertPromise, timeoutPromise]) as any
 
-        if (error) throw error
+        if (error) {
+          console.error("❌ Error de Supabase:", error)
+          console.error("❌ Código de error:", error.code)
+          console.error("❌ Detalles:", error.details)
+          console.error("❌ Hint:", error.hint)
+          console.error("❌ Message:", error.message)
+          throw error
+        }
 
+        console.log("✅ Producto creado:", data)
         toast({
           title: "Producto creado",
           description: "El producto se creó correctamente",
         })
       }
 
+      console.log("🔄 Redirigiendo a lista de productos...")
       router.push("/admin/products")
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error saving product:", error)
+      console.error("❌ Error completo:", error)
+      const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el producto"
       toast({
         title: "Error",
-        description: "No se pudo guardar el producto",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
+      setUploadProgress(false)
     }
   }
 
@@ -169,15 +309,78 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">URL de Imagen</Label>
-            <Input
-              id="imageUrl"
-              type="url"
-              placeholder="https://ejemplo.com/imagen.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">Deja en blanco para usar imagen placeholder</p>
+            <Label>Imagen del Producto</Label>
+            
+            {/* Preview de la imagen */}
+            {imagePreview && (
+              <div className="relative w-full h-48 border rounded-lg overflow-hidden bg-muted">
+                <Image
+                  src={imagePreview}
+                  alt="Preview"
+                  fill
+                  className="object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Input de archivo */}
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('image-upload')?.click()}
+                disabled={uploadProgress}
+                className="bg-transparent"
+              >
+                {uploadProgress ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {imagePreview ? 'Cambiar Imagen' : 'Subir Imagen'}
+                  </>
+                )}
+              </Button>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              <span className="text-xs text-muted-foreground">
+                {imageFile ? imageFile.name : 'JPG, PNG, WEBP (máx. 5MB)'}
+              </span>
+            </div>
+
+            {/* Opción alternativa: URL manual */}
+            <div className="pt-2">
+              <Label htmlFor="imageUrl" className="text-xs text-muted-foreground">O ingresa una URL</Label>
+              <Input
+                id="imageUrl"
+                type="url"
+                placeholder="https://ejemplo.com/imagen.jpg"
+                value={imageUrl}
+                onChange={(e) => {
+                  setImageUrl(e.target.value)
+                  if (e.target.value) {
+                    setImagePreview(e.target.value)
+                    setImageFile(null)
+                  }
+                }}
+                disabled={!!imageFile}
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">

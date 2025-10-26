@@ -18,13 +18,19 @@ export default async function HomePage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">
-        <div className="container">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/10 to-background/90 z-20" />
+          <div className="absolute inset-0 bg-[url('/wallp.jpg')] bg-cover bg-center opacity-120 dark:opacity-120" />
+        </div>
+        
+        <div className="container relative z-20">
           <div className="mx-auto max-w-3xl text-center animate-slide-up">
             <h1 className="text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-balance">
               Las Mejores Figuras de Acción
             </h1>
-            <p className="mt-4 md:mt-6 text-base md:text-lg leading-7 md:leading-8 text-muted-foreground text-pretty animate-slide-up animate-delay-100">
+            <p className="mt-4 md:mt-6 font-bold md:text-lg leading-7 md:leading-8  text-pretty animate-slide-up animate-delay-100 text-balance">
               Descubre nuestra colección exclusiva de figuras de acción de tus personajes favoritos. Marvel, DC, Star
               Wars y más.
             </p>
@@ -34,9 +40,6 @@ export default async function HomePage() {
                   Ver Productos
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-transparent">
-                <Link href="/auth/sign-up">Crear Cuenta</Link>
               </Button>
             </div>
           </div>
