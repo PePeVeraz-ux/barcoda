@@ -43,9 +43,10 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
-# Scripts SQL (contienen datos sensibles)
-/scripts
+# Scripts SQL con datos sensibles (backups, datos reales)
+/scripts/*-backup.sql
+/scripts/*-data.sql
+/scripts/private/
 
-# Cloudflare Worker
-/cloudflare-worker-example.js
-/cloudflare-worker-fixed.js
+# Cloudflare Worker con credenciales
+# Los archivos de ejemplo SÍ se suben al repo
