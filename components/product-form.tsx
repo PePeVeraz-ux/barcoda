@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import Image from "next/image"
 import { Upload, X, Loader2 } from "lucide-react"
+import { MultiImageUpload } from "@/components/multi-image-upload"
 
 interface Category {
   id: string
@@ -28,6 +29,7 @@ interface Product {
   description: string | null
   price: number
   image_url: string | null
+  images: string[] | null
   category_id: string | null
   stock: number
 }
@@ -42,6 +44,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [description, setDescription] = useState(product?.description || "")
   const [price, setPrice] = useState(product?.price?.toString() || "")
   const [imageUrl, setImageUrl] = useState(product?.image_url || "")
+  const [images, setImages] = useState<string[]>(product?.images || [])
   const [categoryId, setCategoryId] = useState(product?.category_id || "")
   const [stock, setStock] = useState(product?.stock?.toString() || "")
   const [isLoading, setIsLoading] = useState(false)
@@ -171,7 +174,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         name,
         description: description || null,
         price: Number.parseFloat(price),
-        image_url: finalImageUrl || null,
+        image_url: finalImageUrl || (images.length > 0 ? images[0] : null),
+        images: images.length > 0 ? images : null,
         category_id: categoryId || null,
         stock: Number.parseInt(stock),
       }
@@ -222,7 +226,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
 
       console.log("🔄 Redirigiendo a lista de productos...")
       router.push("/admin/products")
-      router.refresh()
+      // No usar router.refresh() para evitar que el navbar pierda estado
     } catch (error) {
       console.error("❌ Error completo:", error)
       const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el producto"
@@ -308,80 +312,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Imagen del Producto</Label>
-            
-            {/* Preview de la imagen */}
-            {imagePreview && (
-              <div className="relative w-full h-48 border rounded-lg overflow-hidden bg-muted">
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  fill
-                  className="object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            {/* Input de archivo */}
-            <div className="flex items-center gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('image-upload')?.click()}
-                disabled={uploadProgress}
-                className="bg-transparent"
-              >
-                {uploadProgress ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Subiendo...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    {imagePreview ? 'Cambiar Imagen' : 'Subir Imagen'}
-                  </>
-                )}
-              </Button>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              <span className="text-xs text-muted-foreground">
-                {imageFile ? imageFile.name : 'JPG, PNG, WEBP (máx. 5MB)'}
-              </span>
-            </div>
-
-            {/* Opción alternativa: URL manual */}
-            <div className="pt-2">
-              <Label htmlFor="imageUrl" className="text-xs text-muted-foreground">O ingresa una URL</Label>
-              <Input
-                id="imageUrl"
-                type="url"
-                placeholder="https://ejemplo.com/imagen.jpg"
-                value={imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value)
-                  if (e.target.value) {
-                    setImagePreview(e.target.value)
-                    setImageFile(null)
-                  }
-                }}
-                disabled={!!imageFile}
-              />
-            </div>
-          </div>
+          {/* Componente de múltiples imágenes */}
+          <MultiImageUpload
+            images={images}
+            onImagesChange={setImages}
+            maxImages={5}
+          />
 
           <div className="flex gap-4">
             <Button type="submit" disabled={isLoading} className="flex-1">

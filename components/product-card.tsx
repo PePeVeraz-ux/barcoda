@@ -6,6 +6,7 @@ import { ShoppingCart } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useScrollAnimation } from "@/hooks/use-scroll-animation"
+import { memo } from "react"
 
 interface ProductCardProps {
   id: string
@@ -15,7 +16,7 @@ interface ProductCardProps {
   stock: number
 }
 
-export function ProductCard({ id, name, price, imageUrl, stock }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl, stock }: ProductCardProps) {
   const { ref, isVisible } = useScrollAnimation()
 
   return (
@@ -29,7 +30,9 @@ export function ProductCard({ id, name, price, imageUrl, stock }: ProductCardPro
             src={imageUrl || "/placeholder.svg"}
             alt={name}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover transition-transform duration-500 group-hover:scale-110"
+            loading="lazy"
           />
           {stock === 0 && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -62,4 +65,4 @@ export function ProductCard({ id, name, price, imageUrl, stock }: ProductCardPro
       </CardFooter>
     </Card>
   )
-}
+})

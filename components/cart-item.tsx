@@ -1,14 +1,12 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Trash2, Minus, Plus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useToast } from "@/hooks/use-toast"
+import { useState, memo } from "react"
+import { useCart } from "@/hooks/use-cart"
 
 interface CartItemProps {
   item: {
@@ -25,58 +23,31 @@ interface CartItemProps {
   cartId: string
 }
 
-export function CartItem({ item, cartId }: CartItemProps) {
+export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) {
   const [quantity, setQuantity] = useState(item.quantity)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
-  const supabase = createClient()
+  const { isLoading, updateQuantity: updateQty, removeItem: removeFromCart } = useCart()
 
   const updateQuantity = async (newQuantity: number) => {
     if (newQuantity < 1 || newQuantity > item.products.stock) return
 
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.from("cart_items").update({ quantity: newQuantity }).eq("id", item.id)
+    // Optimistic update
+    const prevQuantity = quantity
+    setQuantity(newQuantity)
 
-      if (error) throw error
-
-      setQuantity(newQuantity)
-      // No usar router.refresh() para evitar que el navbar pierda estado
-    } catch (error) {
-      console.error("[v0] Error updating quantity:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la cantidad",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    const result = await updateQty(item.id, newQuantity)
+    
+    // Revert on failure
+    if (!result.success) {
+      setQuantity(prevQuantity)
     }
   }
 
   const removeItem = async () => {
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.from("cart_items").delete().eq("id", item.id)
-
-      if (error) throw error
-
-      toast({
-        title: "Producto eliminado",
-        description: "El producto se eliminó del carrito",
-      })
-
-      // No usar router.refresh() para evitar que el navbar pierda estado
-    } catch (error) {
-      console.error("[v0] Error removing item:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el producto",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    const result = await removeFromCart(item.id)
+    
+    if (result.success) {
+      // Forzar recarga de la página sin perder estado del navbar
+      window.location.reload()
     }
   }
 
@@ -152,4 +123,4 @@ export function CartItem({ item, cartId }: CartItemProps) {
       </div>
     </div>
   )
-}
+})

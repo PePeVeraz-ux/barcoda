@@ -105,7 +105,7 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
       setTimeout(() => {
         window.open(`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`, "_blank")
         router.push("/orders")
-        router.refresh()
+        // No usar router.refresh() para evitar que el navbar pierda estado
       }, 1500)
     } catch (error) {
       console.error("[v0] Error creating order:", error)

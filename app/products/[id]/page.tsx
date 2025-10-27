@@ -8,6 +8,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AddToCartButton } from "@/components/add-to-cart-button"
 import { ScrollSection } from "@/components/scroll-section"
+import { ProductImageGallery } from "@/components/product-image-gallery"
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -40,11 +41,14 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
         <ScrollSection animation="fade">
           <div className="grid gap-8 lg:grid-cols-2">
-            {/* Product Image */}
-            <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
-              <Image src={product.image_url || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
+            {/* Product Images Gallery */}
+            <div className="relative">
+              <ProductImageGallery 
+                images={product.images && product.images.length > 0 ? product.images : [product.image_url || "/placeholder.svg"]}
+                productName={product.name}
+              />
               {product.stock === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
                   <span className="text-2xl font-bold text-white">Agotado</span>
                 </div>
               )}

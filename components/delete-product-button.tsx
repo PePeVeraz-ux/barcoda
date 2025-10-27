@@ -42,7 +42,8 @@ export function DeleteProductButton({ productId, productName }: DeleteProductBut
         description: "El producto se eliminó correctamente",
       })
 
-      router.refresh()
+      // Redirigir sin refresh para evitar que el navbar pierda estado
+      router.push("/admin/products")
     } catch (error) {
       console.error("[v0] Error deleting product:", error)
       toast({

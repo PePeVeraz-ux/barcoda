@@ -1,27 +1,18 @@
 "use client"
 
 import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { ShoppingCart } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
-interface AddToCartButtonProps {
-  productId: string
-  stock: number
-}
-
-export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
+export function useCart() {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
 
-  const handleAddToCart = async () => {
+  const addToCart = useCallback(async (productId: string) => {
     setIsLoading(true)
     
-    // Timeout de seguridad para evitar que se quede en "Agregando..."
+    // Timeout de seguridad
     const timeoutId = setTimeout(() => {
       setIsLoading(false)
       toast({
@@ -29,22 +20,23 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
         description: "La operación tardó demasiado. Inténtalo de nuevo.",
         variant: "destructive",
       })
-    }, 10000) // 10 segundos
+    }, 10000)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
         clearTimeout(timeoutId)
         setIsLoading(false)
-        router.push("/auth/login")
-        return
+        return { success: false, needsAuth: true }
       }
 
       // Get or create cart
-      let { data: cart } = await supabase.from("carts").select("id").eq("user_id", user.id).single()
+      let { data: cart } = await supabase
+        .from("carts")
+        .select("id")
+        .eq("user_id", user.id)
+        .single()
 
       if (!cart) {
         const { data: newCart, error: cartError } = await supabase
@@ -91,24 +83,78 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
         description: "El producto se agregó a tu carrito",
       })
 
-      // No usar router.refresh() para evitar que el navbar pierda estado
+      return { success: true, needsAuth: false }
     } catch (error) {
       clearTimeout(timeoutId)
-      console.error("[v0] Error adding to cart:", error)
+      console.error("Error adding to cart:", error)
       toast({
         title: "Error",
         description: "No se pudo agregar el producto al carrito",
         variant: "destructive",
       })
+      return { success: false, needsAuth: false }
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase, toast])
 
-  return (
-    <Button className="w-full" size="lg" disabled={stock === 0 || isLoading} onClick={handleAddToCart}>
-      <ShoppingCart className="mr-2 h-5 w-5" />
-      {isLoading ? "Agregando..." : "Agregar al Carrito"}
-    </Button>
-  )
+  const updateQuantity = useCallback(async (itemId: string, newQuantity: number) => {
+    setIsLoading(true)
+    try {
+      const { error } = await supabase
+        .from("cart_items")
+        .update({ quantity: newQuantity })
+        .eq("id", itemId)
+
+      if (error) throw error
+
+      return { success: true }
+    } catch (error) {
+      console.error("Error updating quantity:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la cantidad",
+        variant: "destructive",
+      })
+      return { success: false }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, toast])
+
+  const removeItem = useCallback(async (itemId: string) => {
+    setIsLoading(true)
+    try {
+      const { error } = await supabase
+        .from("cart_items")
+        .delete()
+        .eq("id", itemId)
+
+      if (error) throw error
+
+      toast({
+        title: "Producto eliminado",
+        description: "El producto se eliminó del carrito",
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error("Error removing item:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el producto",
+        variant: "destructive",
+      })
+      return { success: false }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, toast])
+
+  return {
+    isLoading,
+    addToCart,
+    updateQuantity,
+    removeItem,
+  }
 }

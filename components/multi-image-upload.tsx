@@ -96,7 +96,7 @@ export function MultiImageUpload({ images, onImagesChange, maxImages = 5 }: Mult
     const formData = new FormData()
     formData.append("file", file)
 
-    const response = await fetch(workerUrl, {
+    const response = await fetch(`${workerUrl}/upload`, {
       method: "POST",
       body: formData,
     })

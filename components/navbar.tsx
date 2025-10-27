@@ -1,13 +1,12 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useCallback } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuth } from "@/contexts/auth-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,88 +16,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function Navbar() {
-  const [user, setUser] = useState<any>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, isAdmin, isLoading, signOut } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
-
-  const checkUserRole = useCallback(async (userId: string) => {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", userId).single()
-    return profile?.role === "admin"
-  }, [supabase])
-
-  useEffect(() => {
-    let mounted = true
-
-    const getUser = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-        
-        if (!mounted) return
-        
-        setUser(user)
-
-        if (user) {
-          const isAdminUser = await checkUserRole(user.id)
-          if (mounted) {
-            setIsAdmin(isAdminUser)
-            setIsLoading(false)
-          }
-        } else {
-          if (mounted) {
-            setIsAdmin(false)
-            setIsLoading(false)
-          }
-        }
-      } catch (error) {
-        console.error("Error al obtener usuario:", error)
-        if (mounted) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    getUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
-      
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        const isAdminUser = await checkUserRole(session.user.id)
-        if (mounted) {
-          setIsAdmin(isAdminUser)
-          setIsLoading(false)
-        }
-      } else {
-        if (mounted) {
-          setIsAdmin(false)
-          setIsLoading(false)
-        }
-      }
-      
-      // Solo refrescar en eventos específicos
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        router.refresh()
-      }
-    })
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [supabase, checkUserRole])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut()
     router.push("/")
-    router.refresh()
   }
 
   return (
