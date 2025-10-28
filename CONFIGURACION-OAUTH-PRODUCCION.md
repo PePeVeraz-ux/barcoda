@@ -58,9 +58,13 @@ Asegúrate de que en Google Cloud Console tengas configurado:
 
 En el panel de Supabase, ve a **Authentication** > **URL Configuration** y verifica:
 
-**Site URL:**
-- Para desarrollo: `http://localhost:3000`
-- Para producción: `https://barcodabazar.vercel.app`
+**Site URL:** ⚠️ **ESTO ES LO MÁS IMPORTANTE**
+- ❌ NO uses: `http://localhost:3000`
+- ✅ DEBES usar: `https://barcodabazar.vercel.app`
+
+**El Site URL es lo que determina qué dominio muestra Google en el mensaje de OAuth.**
+Si está configurado como `localhost:3000`, Google dirá "Accede a localhost:3000"
+Si está configurado como tu dominio de producción, Google dirá "Accede a barcodabazar.vercel.app"
 
 **Redirect URLs:**
 Agrega las siguientes URLs:
