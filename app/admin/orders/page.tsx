@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { OrderStatusSelect } from "@/components/order-status-select"
 import { redirect } from "next/navigation"
@@ -60,7 +59,6 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar />
 
       <div className="container py-8">
         <div className="mb-8">
@@ -104,6 +102,13 @@ export default async function AdminOrdersPage() {
                           minute: "2-digit",
                         })}
                       </p>
+                      {order.shipping_name && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">Envío:</p>
+                          <p className="text-xs">{order.shipping_name} • {order.shipping_phone}</p>
+                          <p className="text-xs text-muted-foreground">{order.shipping_address}, {order.shipping_city} {order.shipping_postal_code}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft } from "lucide-react"
@@ -29,7 +28,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="min-h-screen">
-      <Navbar />
 
       <div className="container py-8">
         <Button variant="ghost" asChild className="mb-6">

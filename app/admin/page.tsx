@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, ShoppingCart, DollarSign, Users } from "lucide-react"
@@ -58,7 +57,6 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar />
 
       <div className="container py-8">
         <div className="mb-8">

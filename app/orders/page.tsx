@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { redirect } from "next/navigation"
@@ -27,15 +26,15 @@ export default async function OrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
+        return "bg-yellow-500 text-white hover:bg-yellow-600"
       case "processing":
-        return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
+        return "bg-blue-500 text-white hover:bg-blue-600"
       case "shipped":
-        return "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
+        return "bg-purple-500 text-white hover:bg-purple-600"
       case "delivered":
-        return "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+        return "bg-green-500 text-white hover:bg-green-600"
       case "cancelled":
-        return "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+        return "bg-red-500 text-white hover:bg-red-600"
       default:
         return ""
     }
@@ -60,7 +59,6 @@ export default async function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar />
 
       <div className="container py-8">
         <div className="mb-8">
@@ -91,19 +89,37 @@ export default async function OrdersPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {order.order_items.map((item: any) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
-                      >
-                        <div>
-                          <p className="font-medium">{item.products.name}</p>
-                          <p className="text-sm text-muted-foreground">Cantidad: {item.quantity}</p>
+                  <div className="space-y-4">
+                    {/* Shipping Information */}
+                    {order.shipping_name && (
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2 text-sm">Información de Envío</h3>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="text-muted-foreground">Nombre:</span> {order.shipping_name}</p>
+                          <p><span className="text-muted-foreground">Dirección:</span> {order.shipping_address}</p>
+                          <p><span className="text-muted-foreground">Ciudad:</span> {order.shipping_city}</p>
+                          <p><span className="text-muted-foreground">C.P.:</span> {order.shipping_postal_code}</p>
+                          <p><span className="text-muted-foreground">Teléfono:</span> {order.shipping_phone}</p>
                         </div>
-                        <p className="font-bold">${(Number(item.price) * item.quantity).toFixed(2)}</p>
                       </div>
-                    ))}
+                    )}
+                    
+                    {/* Order Items */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-sm">Productos</h3>
+                      {order.order_items.map((item: any) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                        >
+                          <div>
+                            <p className="font-medium">{item.products.name}</p>
+                            <p className="text-sm text-muted-foreground">Cantidad: {item.quantity}</p>
+                          </div>
+                          <p className="font-bold">${(Number(item.price) * item.quantity).toFixed(2)}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

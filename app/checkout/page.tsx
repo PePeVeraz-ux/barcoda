@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { redirect } from "next/navigation"
 import { CheckoutForm } from "@/components/checkout-form"
@@ -32,7 +31,6 @@ export default async function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar />
 
       <div className="container py-8">
         <div className="mb-8">

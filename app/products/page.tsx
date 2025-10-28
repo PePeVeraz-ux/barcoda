@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProductCard } from "@/components/product-card"
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -30,7 +29,6 @@ export default async function ProductsPage({
 
   return (
     <div className="min-h-screen">
-      <Navbar />
 
       <div className="container py-6 md:py-8">
         <div className="mb-6 md:mb-8 animate-slide-up">

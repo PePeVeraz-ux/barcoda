@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navbar } from "@/components/navbar"
 import { ProductForm } from "@/components/product-form"
 import { redirect } from "next/navigation"
 
@@ -24,7 +23,6 @@ export default async function NewProductPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Navbar />
 
       <div className="container py-8 max-w-2xl">
         <div className="mb-8">

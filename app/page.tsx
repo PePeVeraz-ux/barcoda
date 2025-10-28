@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
-import { Navbar } from "@/components/navbar"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { ScrollSection } from "@/components/scroll-section"
@@ -15,7 +14,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">

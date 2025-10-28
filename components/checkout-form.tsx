@@ -42,13 +42,18 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
         return
       }
 
-      // Create order
+      // Create order with shipping information
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
           total,
           status: "pending",
+          shipping_name: fullName,
+          shipping_address: address,
+          shipping_city: city,
+          shipping_postal_code: postalCode,
+          shipping_phone: phone,
         })
         .select()
         .single()

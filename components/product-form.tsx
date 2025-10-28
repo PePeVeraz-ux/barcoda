@@ -184,14 +184,14 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       if (product) {
         // Update existing product
         console.log("🔄 Actualizando producto existente...")
-        const { error } = await supabase.from("products").update(productData).eq("id", product.id)
+        const { error, data } = await supabase.from("products").update(productData).eq("id", product.id).select()
 
         if (error) {
           console.error("❌ Error de Supabase:", error)
           throw error
         }
 
-        console.log("✅ Producto actualizado")
+        console.log("✅ Producto actualizado:", data)
         toast({
           title: "Producto actualizado",
           description: "El producto se actualizó correctamente",
@@ -200,13 +200,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         // Create new product
         console.log("➕ Creando nuevo producto...")
         
-        // Agregar timeout para detectar si se congela
-        const insertPromise = supabase.from("products").insert(productData)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout: La inserción tardó más de 10 segundos')), 10000)
-        )
-        
-        const { error, data } = await Promise.race([insertPromise, timeoutPromise]) as any
+        const { error, data } = await supabase.from("products").insert(productData).select()
 
         if (error) {
           console.error("❌ Error de Supabase:", error)
@@ -225,8 +219,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       }
 
       console.log("🔄 Redirigiendo a lista de productos...")
-      router.push("/admin/products")
-      // No usar router.refresh() para evitar que el navbar pierda estado
+      
+      // Usar setTimeout para asegurar que el toast se muestre antes de la redirección
+      setTimeout(() => {
+        router.push("/admin/products")
+      }, 500)
     } catch (error) {
       console.error("❌ Error completo:", error)
       const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el producto"
