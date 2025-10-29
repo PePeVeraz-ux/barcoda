@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from '@vercel/analytics/react';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +46,8 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        <SpeedInsights />
+        <Analytics />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
