@@ -97,13 +97,6 @@ export default async function HomePage() {
           </div>
         </section>
       </ScrollSection>
-
-      {/* Footer */}
-      <footer className="border-t py-8 md:py-12">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>&copy; 2025 Action Figures Store. Todos los derechos reservados.</p>
-        </div>
-      </footer>
     </div>
   )
 }
