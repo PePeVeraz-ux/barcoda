@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react"
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useRef } from "react"
 
 interface AuthContextType {
   user: User | null
@@ -18,12 +18,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = useMemo(() => createClient(), [])
+  const initRef = useRef(false) // Para evitar doble inicialización
 
   useEffect(() => {
+    // Evitar doble inicialización en desarrollo (React StrictMode)
+    if (initRef.current) return
+    initRef.current = true
+
     // Get initial session
     const initAuth = async () => {
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser()
+
         setUser(currentUser)
 
         if (currentUser) {
@@ -34,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single()
           
           setIsAdmin(profile?.role === "admin")
+        } else {
+          setIsAdmin(false)
         }
       } catch (error) {
         console.error("Error initializing auth:", error)
@@ -47,7 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null
-      setUser(currentUser)
+      
+      // Solo actualizar si realmente cambió el usuario
+      setUser((prevUser) => {
+        if (!prevUser && !currentUser) return prevUser
+        if (prevUser && currentUser && prevUser.id === currentUser.id) return prevUser
+        return currentUser
+      })
 
       if (currentUser) {
         const { data: profile } = await supabase
@@ -61,7 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAdmin(false)
       }
 
-      setIsLoading(false)
+      // Solo marcar como no loading si estaba loading
+      setIsLoading((prev) => (prev ? false : prev))
     })
 
     return () => {

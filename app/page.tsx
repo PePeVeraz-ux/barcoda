@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Sparkles } from "lucide-react"
 import { ScrollSection } from "@/components/scroll-section"
 
 export default async function HomePage() {
@@ -17,23 +17,28 @@ export default async function HomePage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">
-        {/* Background Image with Overlay */}
+        {/* Background Image with Zoom-out Animation */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/10 to-background/90 z-20" />
-          <div className="absolute inset-0 bg-[url('/wallp.jpg')] bg-cover bg-center opacity-120 dark:opacity-120" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/10 to-background/90 z-20 animate-hero-overlay" />
+          <div className="absolute inset-0 bg-[url('/wallp.jpg')] bg-cover bg-center animate-hero-zoom-out" style={{ transformOrigin: 'center center' }} />
         </div>
         
         <div className="container relative z-20">
-          <div className="mx-auto max-w-3xl text-center animate-slide-up">
+          <div className="mx-auto max-w-3xl text-center animate-hero-content">
+            {/* Título */}
             <h1 className="text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-balance">
               Las Mejores Figuras de Acción
             </h1>
-            <p className="mt-4 md:mt-6 font-bold md:text-lg leading-7 md:leading-8  text-pretty animate-slide-up animate-delay-100 text-balance">
+            
+            {/* Descripción */}
+            <p className="mt-4 md:mt-6 font-bold md:text-lg leading-7 md:leading-8 text-pretty text-balance">
               Descubre nuestra colección exclusiva de figuras de acción de tus personajes favoritos. Marvel, DC, Star
               Wars y más.
             </p>
-            <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 animate-slide-up animate-delay-200">
-              <Button size="lg" asChild className="w-full sm:w-auto">
+            
+            {/* Botones */}
+            <div className="mt-8 md:mt-10 flex items-center justify-center">
+              <Button size="lg" asChild>
                 <Link href="/products">
                   Ver Productos
                   <ArrowRight className="ml-2 h-4 w-4" />

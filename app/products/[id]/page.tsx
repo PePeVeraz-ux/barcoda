@@ -8,6 +8,7 @@ import { notFound } from "next/navigation"
 import { AddToCartButton } from "@/components/add-to-cart-button"
 import { ScrollSection } from "@/components/scroll-section"
 import { ProductImageGallery } from "@/components/product-image-gallery"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,6 +31,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div className="min-h-screen">
 
       <div className="container py-8">
+        <Breadcrumbs
+          items={[
+            { label: "Productos", href: "/products" },
+            { label: product.categories?.name || "Categoría", href: `/products?category=${product.categories?.slug}` },
+            { label: product.name },
+          ]}
+          className="mb-6"
+        />
+
         <Button variant="ghost" asChild className="mb-6">
           <Link href="/products">
             <ArrowLeft className="mr-2 h-4 w-4" />

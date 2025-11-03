@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { calculateShipping } from "@/lib/shipping"
 
 interface CheckoutFormProps {
   cartId: string
@@ -42,12 +43,48 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
         return
       }
 
+      // Validar stock antes de crear la orden
+      const stockValidation = await fetch("/api/validate-cart-stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId }),
+      })
+
+      const stockResult = await stockValidation.json()
+
+      if (!stockResult.valid) {
+        const issueMessages = stockResult.issues
+          .map((issue: any) => 
+            `${issue.productName}: solicitaste ${issue.requested}, disponibles: ${issue.available}`
+          )
+          .join(" | ")
+
+        toast({
+          title: "Stock insuficiente",
+          description: issueMessages,
+          variant: "destructive",
+        })
+        
+        // Redirigir al carrito para que actualice y vea el problema
+        setTimeout(() => {
+          router.push("/cart")
+        }, 2000)
+        return
+      }
+
+      // Calcular detalles de envío
+      const shipping = calculateShipping(cartItems)
+      const subtotal = total - shipping.cost
+
       // Create order with shipping information
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
           total,
+          shipping_cost: shipping.cost,
+          shipping_weight: shipping.totalWeight,
+          shipping_boxes: shipping.boxes,
           status: "pending",
           shipping_name: fullName,
           shipping_address: address,
@@ -60,7 +97,7 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
 
       if (orderError) throw orderError
 
-      // Create order items
+      // Create order items and update stock
       const orderItems = cartItems.map((item) => ({
         order_id: order.id,
         product_id: item.products.id,
@@ -71,6 +108,22 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
 
       if (itemsError) throw itemsError
+
+      // Actualizar stock de productos
+      for (const item of cartItems) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.products.id)
+          .single()
+
+        if (product) {
+          await supabase
+            .from("products")
+            .update({ stock: Math.max(0, product.stock - item.quantity) })
+            .eq("id", item.products.id)
+        }
+      }
 
       // Clear cart items
       const { error: clearError } = await supabase.from("cart_items").delete().eq("cart_id", cartId)
@@ -87,9 +140,12 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
 
       const whatsappMessage = encodeURIComponent(
         `¡Hola! Quiero confirmar mi pedido:\n\n` +
-          `📦 Orden #${order.id.slice(0, 8)}\n` +
-          `💰 Total: $${total.toFixed(2)}\n\n` +
+          `📦 Orden #${order.id.slice(0, 8)}\n\n` +
           `🛍️ Productos:\n${productsText}\n\n` +
+          `💵 Resumen:\n` +
+          `Subtotal: $${subtotal.toFixed(2)}\n` +
+          `Envío: $${shipping.cost.toFixed(2)} (${shipping.boxes} caja(s), ${shipping.totalWeight.toFixed(2)}kg)\n` +
+          `💰 Total: $${total.toFixed(2)}\n\n` +
           `📍 Datos de envío:\n` +
           `Nombre: ${fullName}\n` +
           `Dirección: ${address}\n` +

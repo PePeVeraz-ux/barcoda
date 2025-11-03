@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { redirect } from "next/navigation"
 import { CheckoutForm } from "@/components/checkout-form"
+import { calculateShipping } from "@/lib/shipping"
+import { Package } from "lucide-react"
 import Image from "next/image"
 
 export default async function CheckoutPage() {
@@ -27,7 +29,11 @@ export default async function CheckoutPage() {
     redirect("/cart")
   }
 
-  const total = cartItems.reduce((sum, item) => sum + Number(item.products.price) * item.quantity, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.products.price) * item.quantity, 0)
+  
+  // Calcular envío basado en peso
+  const shipping = calculateShipping(cartItems)
+  const total = subtotal + shipping.cost
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -74,11 +80,19 @@ export default async function CheckoutPage() {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Envío</span>
-                    <span>Gratis</span>
+                    <div className="flex items-center gap-1">
+                      <Package className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Envío</span>
+                    </div>
+                    <div className="text-right">
+                      <div>${shipping.cost.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {shipping.boxes} caja(s) - {shipping.totalWeight.toFixed(2)}kg
+                      </div>
+                    </div>
                   </div>
                   <div className="border-t pt-2">
                     <div className="flex justify-between font-bold text-lg">

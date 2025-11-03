@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, ShoppingCart, DollarSign, Users } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Package, ShoppingCart, DollarSign, Users, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -55,6 +56,14 @@ export default async function AdminPage() {
     }))
   }
 
+  // Obtener productos con stock bajo (menos de 5 unidades)
+  const { data: lowStockProducts } = await supabase
+    .from("products")
+    .select("id, name, stock, image_url")
+    .lte("stock", 5)
+    .order("stock", { ascending: true })
+    .limit(5)
+
   return (
     <div className="min-h-screen bg-muted/30">
 
@@ -106,6 +115,59 @@ export default async function AdminPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Low Stock Alert */}
+        {lowStockProducts && lowStockProducts.length > 0 && (
+          <Card className="mb-8 border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <CardTitle className="text-orange-900 dark:text-orange-100">
+                  Productos con Stock Bajo
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {lowStockProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {product.image_url && (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="object-cover w-full h-full"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge
+                            variant={product.stock === 0 ? "destructive" : "secondary"}
+                            className="text-xs"
+                          >
+                            {product.stock === 0 ? "Agotado" : `${product.stock} unidades`}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/products/${product.id}/edit`}>Editar</Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full mt-4" asChild>
+                <Link href="/admin/products">Ver Todos los Productos</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div className="grid gap-6 lg:grid-cols-2 mb-8">

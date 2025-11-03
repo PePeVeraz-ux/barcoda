@@ -2,11 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, Minus, Plus } from "lucide-react"
+import { Trash2, Minus, Plus, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, memo } from "react"
 import { useCart } from "@/hooks/use-cart"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 
 interface CartItemProps {
   item: {
@@ -26,9 +28,19 @@ interface CartItemProps {
 export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) {
   const [quantity, setQuantity] = useState(item.quantity)
   const { isLoading, updateQuantity: updateQty, removeItem: removeFromCart } = useCart()
+  const { toast } = useToast()
 
   const updateQuantity = async (newQuantity: number) => {
-    if (newQuantity < 1 || newQuantity > item.products.stock) return
+    if (newQuantity < 1) return
+    
+    if (newQuantity > item.products.stock) {
+      toast({
+        title: "Stock insuficiente",
+        description: `Solo hay ${item.products.stock} unidad(es) disponible(s)`,
+        variant: "destructive",
+      })
+      return
+    }
 
     // Optimistic update
     const prevQuantity = quantity
@@ -39,16 +51,16 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
     // Revert on failure
     if (!result.success) {
       setQuantity(prevQuantity)
+    } else {
+      // Disparar evento para actualizar contador
+      window.dispatchEvent(new Event('cart-updated'))
     }
   }
 
   const removeItem = async () => {
-    const result = await removeFromCart(item.id)
-    
-    if (result.success) {
-      // Forzar recarga de la página sin perder estado del navbar
-      window.location.reload()
-    }
+    await removeFromCart(item.id)
+    // Disparar evento para actualizar contador inmediatamente
+    window.dispatchEvent(new Event('cart-updated'))
   }
 
   return (
@@ -71,6 +83,25 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
             {item.products.name}
           </Link>
           <p className="text-lg font-bold text-primary mt-1">${Number(item.products.price).toFixed(2)}</p>
+          
+          {/* Alerta de stock */}
+          {item.products.stock === 0 && (
+            <Badge variant="destructive" className="mt-2 gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Sin stock - Eliminar del carrito
+            </Badge>
+          )}
+          {item.products.stock > 0 && quantity > item.products.stock && (
+            <Badge variant="secondary" className="mt-2 gap-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+              <AlertCircle className="h-3 w-3" />
+              Solo {item.products.stock} disponible(s)
+            </Badge>
+          )}
+          {item.products.stock > 0 && item.products.stock <= 5 && quantity <= item.products.stock && (
+            <Badge variant="secondary" className="mt-2 gap-1 text-xs">
+              Pocas unidades disponibles
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
