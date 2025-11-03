@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useCartCount } from "@/hooks/use-cart-count"
 import { Badge } from "@/components/ui/badge"
 import { SearchBar } from "@/components/search-bar"
-import { useState, memo, useCallback } from "react"
+import { useState, memo, useCallback, Suspense } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +66,9 @@ export const Navbar = memo(function Navbar() {
 
         {/* Search Bar - Desktop */}
         <div className="hidden lg:flex flex-1 justify-center max-w-md">
-          <SearchBar />
+          <Suspense fallback={<div className="w-full" />}>
+            <SearchBar />
+          </Suspense>
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
@@ -82,7 +84,9 @@ export const Navbar = memo(function Navbar() {
                 <SheetTitle>Buscar productos</SheetTitle>
               </SheetHeader>
               <div className="mt-4">
-                <SearchBar />
+                <Suspense fallback={<div />}>
+                  <SearchBar />
+                </Suspense>
               </div>
             </SheetContent>
           </Sheet>
