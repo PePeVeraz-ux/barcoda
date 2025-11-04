@@ -14,8 +14,10 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-
-      {/* Hero Section */}
+      {/* marquee */}
+      <marquee>
+        <p>Envios a todo México    |    Costo de envio $160MXN por hasta un kilo de peso    |    Entregas personales los domingos en Mundo Divertido (Tijuana)</p>
+      </marquee>
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">
         {/* Background Image with Zoom-out Animation */}
         <div className="absolute inset-0 z-0">

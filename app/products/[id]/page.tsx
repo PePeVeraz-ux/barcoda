@@ -88,23 +88,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               </div>
 
               <div className="mt-8 border-t pt-8">
-                <h2 className="text-xl font-semibold mb-4">Características</h2>
                 <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Múltiples puntos de articulación</span>
+                    <span>Entrgas personales los domingos en Mundo Divertido (Tijuana) </span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Accesorios incluidos</span>
+                    <span>Envios a todo México  </span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>Material de alta calidad</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="mr-2">•</span>
-                    <span>Empaque coleccionable</span>
+                    <span>Costo de envio $160MXN por hasta un kilo de peso</span>
                   </li>
                 </ul>
               </div>
