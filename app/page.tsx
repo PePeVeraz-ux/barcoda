@@ -32,11 +32,18 @@ export default async function HomePage() {
               Las Mejores Figuras de Acción
             </h1>
             
-            {/* Botones */}
-            <div className="mt-8 md:mt-10 flex items-center justify-center">
+            {/* Botones (Ver Productos y Contacto whatsapp botones separados) */}
+            <div className="mt-8 md:mt-10 flex items-center justify-center gap-4">
               <Button size="lg" asChild>
                 <Link href="/products">
                   Ver Productos
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+
+              <Button size="lg" asChild>
+                <Link href="https://wa.me/526647691510">
+                  Contactanos
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -52,7 +59,10 @@ export default async function HomePage() {
             <div className="mb-8 md:mb-12 text-center">
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">Explora por Categoría</h2>
               <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
-                Encuentra figuras de tus franquicias favoritas
+                Encuentra figuras de tus franquicias favoritas.
+              </p>
+              <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
+                Cualquier duda, contactanos.
               </p>
             </div>
             <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
