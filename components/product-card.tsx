@@ -62,11 +62,6 @@ export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl
               <span className="text-sm font-bold text-white px-3 py-1.5 bg-black rounded-lg">Agotado</span>
             </div>
           )}
-          {stock > 0 && stock <= 5 && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md animate-scale-in">
-              ¡Últimas {stock}!
-            </div>
-          )}
         </div>
         
         {/* Product info below image */}

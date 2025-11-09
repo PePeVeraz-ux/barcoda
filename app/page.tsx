@@ -8,7 +8,7 @@ import { ScrollSection } from "@/components/scroll-section"
 export default async function HomePage() {
   const supabase = await createClient()
 
-  const { data: categories } = await supabase.from("categories").select("*").limit(5)
+  const { data: categories } = await supabase.from("categories").select("*").limit(10)
 
   const { data: allProducts } = await supabase.from("products").select("*").order("created_at", { ascending: false })
 
@@ -31,12 +31,6 @@ export default async function HomePage() {
             <h1 className="text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-balance">
               Las Mejores Figuras de Acción
             </h1>
-            
-            {/* Descripción */}
-            <p className="mt-4 md:mt-6 font-bold md:text-lg leading-7 md:leading-8 text-pretty text-balance">
-              Descubre nuestra colección exclusiva de figuras de acción de tus personajes favoritos. Marvel, DC, Star
-              Wars y más.
-            </p>
             
             {/* Botones */}
             <div className="mt-8 md:mt-10 flex items-center justify-center">
