@@ -59,7 +59,7 @@ export default async function HomePage() {
             <div className="mb-8 md:mb-12 text-center">
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">Explora por Categoría</h2>
               <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
-                Encuentra figuras de tus franquicias favoritas.
+                Encuentra figuras de tus franquicias favoritas
               </p>
               <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
                 Cualquier duda, contactanos.
