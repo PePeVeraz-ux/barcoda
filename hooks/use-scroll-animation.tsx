@@ -35,9 +35,21 @@ export function useScrollAnimation(options?: IntersectionObserverInit) {
       },
     )
 
-    observer.observe(element)
+    const rect = element.getBoundingClientRect()
+    if (rect.top <= window.innerHeight && rect.bottom >= 0) {
+      setIsVisible(true)
+      observer.disconnect()
+    } else {
+      observer.observe(element)
+    }
+
+    const fallbackTimeout = window.setTimeout(() => {
+      setIsVisible(true)
+      observer.disconnect()
+    }, 750)
 
     return () => {
+      window.clearTimeout(fallbackTimeout)
       observer.disconnect()
     }
   }, [element, options])
