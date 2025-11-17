@@ -16,9 +16,12 @@ interface ProductCardProps {
   price: number
   imageUrl: string
   stock: number
+  salePrice?: number | null
+  saleActive?: boolean
+  salePercentage?: number | null
 }
 
-export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl, stock }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl, stock, salePrice, saleActive, salePercentage }: ProductCardProps) {
   const { ref, isVisible } = useScrollAnimation()
   const [quickViewOpen, setQuickViewOpen] = useState(false)
 
@@ -28,7 +31,13 @@ export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl
     price,
     image_url: imageUrl,
     stock,
+    sale_active: saleActive ?? false,
+    sale_price: salePrice ?? null,
+    sale_percentage: salePercentage ?? null,
   }
+
+  const hasSale = Boolean(saleActive && salePrice && salePrice < price)
+  const formattedSalePercentage = salePercentage ? Math.round(salePercentage) : null
 
   const handleQuickView = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -48,7 +57,15 @@ export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl
         <div className="relative aspect-square overflow-hidden bg-muted rounded-2xl">
           {/* Wishlist Button */}
           <WishlistButton productId={id} productName={name} />
-          
+
+          {hasSale && (
+            <div className="absolute left-2 top-2 z-10">
+              <Badge variant="secondary" className="bg-red-500 text-white shadow-md">
+                {formattedSalePercentage ? `-${formattedSalePercentage}%` : "Oferta"}
+              </Badge>
+            </div>
+          )}
+
           <Image
             src={imageUrl || "/placeholder.svg"}
             alt={name}
@@ -70,9 +87,22 @@ export const ProductCard = memo(function ProductCard({ id, name, price, imageUrl
             {name}
           </h3>
           <div className="flex items-center justify-between">
-            <p className="text-base md:text-lg font-bold">
-              $ {price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-            </p>
+            <div className="flex flex-col text-base md:text-lg">
+              {hasSale ? (
+                <>
+                  <span className="font-bold text-primary">
+                    $ {Number(salePrice).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                  </span>
+                  <span className="text-xs text-muted-foreground line-through">
+                    $ {price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                  </span>
+                </>
+              ) : (
+                <span className="font-bold">
+                  $ {price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                </span>
+              )}
+            </div>
             {stock > 0 && stock <= 10 && (
               <Badge variant="outline" className="text-xs gap-1">
                 <PackageCheck className="h-3 w-3" />

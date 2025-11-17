@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Package, ShoppingCart, DollarSign, Users, AlertTriangle } from "lucide-react"
+import { Package, ShoppingCart, DollarSign, Users, AlertTriangle, TicketPercent, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -192,6 +192,18 @@ export default async function AdminPage() {
                 <Link href="/admin/orders">
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   Ver Órdenes
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
+                <Link href="/admin/sales">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Campaña Buen Fin
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
+                <Link href="/admin/coupons">
+                  <TicketPercent className="mr-2 h-4 w-4" />
+                  Gestionar Cupones
                 </Link>
               </Button>
             </CardContent>

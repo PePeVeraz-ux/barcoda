@@ -17,6 +17,9 @@ interface Product {
   stock: number
   image_url: string
   category_id?: string
+  sale_active?: boolean
+  sale_price?: number | null
+  sale_percentage?: number | null
 }
 
 interface ProductQuickViewProps {
@@ -56,9 +59,25 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
           <div className="flex flex-col gap-4">
             {/* Price */}
             <div>
-              <p className="text-3xl font-bold text-primary">
-                ${product.price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-              </p>
+              {product.sale_active && product.sale_price && product.sale_price < product.price ? (
+                <div className="flex flex-col">
+                  <p className="text-3xl font-bold text-primary">
+                    ${product.sale_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                  </p>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${product.price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                  </p>
+                  {product.sale_percentage && (
+                    <Badge variant="secondary" className="w-fit bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100">
+                      -{Math.round(product.sale_percentage)}%
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-primary">
+                  ${product.price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                </p>
+              )}
             </div>
 
             {/* Stock Status */}

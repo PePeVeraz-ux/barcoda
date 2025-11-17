@@ -4,90 +4,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ShoppingBag } from "lucide-react"
 import Link from "next/link"
+import { useCallback, useEffect, useState } from "react"
+
 import { CartItemsList } from "@/components/cart-items-list"
 import { CartSummary } from "@/components/cart-summary"
-import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { calculateShipping } from "@/lib/shipping"
+import { fetchCartSnapshot, type CartSnapshot } from "@/lib/services/cart-service"
 
 interface CartContentProps {
-  cartId: string
-  initialItems: any[]
-  initialSubtotal: number
-  initialShipping: {
-    cost: number
-    boxes: number
-    totalWeight: number
-    isFree: boolean
-    details: string
-  }
-  initialTotal: number
+  initialSnapshot: CartSnapshot
 }
 
-export function CartContent({ cartId, initialItems, initialSubtotal, initialShipping, initialTotal }: CartContentProps) {
-  const [itemCount, setItemCount] = useState(initialItems.length)
-  const [subtotal, setSubtotal] = useState(initialSubtotal)
-  const [shipping, setShipping] = useState(initialShipping)
-  const [total, setTotal] = useState(initialTotal)
-  const supabase = createClient()
+export function CartContent({ initialSnapshot }: CartContentProps) {
+  const [snapshot, setSnapshot] = useState<CartSnapshot>(initialSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const checkItemCount = useCallback(async () => {
-    const { data: cartItems } = await supabase
-      .from("cart_items")
-      .select("id, quantity, products(price, weight)")
-      .eq("cart_id", cartId)
-
-    setItemCount(cartItems?.length || 0)
-    
-    // Recalcular subtotal y shipping
-    if (cartItems && cartItems.length > 0) {
-      const newSubtotal = cartItems.reduce((sum, item: any) => {
-        return sum + (Number(item.products?.price || 0) * item.quantity)
-      }, 0)
-      const newShipping = calculateShipping(cartItems as any)
-      const newTotal = newSubtotal + newShipping.cost
-      
-      setSubtotal(newSubtotal)
-      setShipping(newShipping)
-      setTotal(newTotal)
-    } else {
-      setSubtotal(0)
-      setShipping({ cost: 0, boxes: 0, totalWeight: 0, isFree: true, details: "" })
-      setTotal(0)
+  const refreshSnapshot = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      const updated = await fetchCartSnapshot()
+      setSnapshot(updated)
+    } catch (error) {
+      console.error("Error refreshing cart snapshot:", error)
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [cartId, supabase])
+  }, [])
 
   useEffect(() => {
-    // Escuchar evento custom
-    const handleCartUpdate = () => {
-      checkItemCount()
-    }
-    window.addEventListener('cart-updated', handleCartUpdate)
+    setSnapshot(initialSnapshot)
+  }, [initialSnapshot])
 
-    // Realtime backup
-    const channel = supabase
-      .channel("cart_content_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cart_items",
-          filter: `cart_id=eq.${cartId}`,
-        },
-        () => {
-          checkItemCount()
-        }
-      )
-      .subscribe()
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      refreshSnapshot()
+    }
+
+    window.addEventListener("cart-updated", handleCartUpdate)
 
     return () => {
-      window.removeEventListener('cart-updated', handleCartUpdate)
-      supabase.removeChannel(channel)
+      window.removeEventListener("cart-updated", handleCartUpdate)
     }
-  }, [cartId, supabase, checkItemCount])
+  }, [refreshSnapshot])
 
-  if (itemCount === 0) {
+  if (!snapshot.cartId || snapshot.itemCount === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -107,21 +66,22 @@ export function CartContent({ cartId, initialItems, initialSubtotal, initialShip
       <div className="lg:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Productos ({itemCount})</CardTitle>
+            <CardTitle>Productos ({snapshot.itemCount})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <CartItemsList initialItems={initialItems} cartId={cartId} />
+            <CartItemsList items={snapshot.items} cartId={snapshot.cartId!} />
           </CardContent>
         </Card>
       </div>
 
       <div>
         <CartSummary 
-          cartId={cartId}
-          initialSubtotal={subtotal}
-          initialShipping={shipping}
-          initialTotal={total} 
-          initialItemCount={itemCount}
+          cartId={snapshot.cartId!}
+          subtotal={snapshot.subtotal}
+          discount={snapshot.discount}
+          couponCode={snapshot.couponCode}
+          itemCount={snapshot.itemCount}
+          isRefreshing={isRefreshing}
         />
       </div>
     </div>

@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
 import Link from "next/link"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { ScrollSection } from "@/components/scroll-section"
+import { Marquee } from "@/components/marquee"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -14,10 +15,16 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
+      <Marquee className="bg-gradient-to-r from-red-600 via-zinc-900 to-red-600 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white md:text-sm">
+        🎉 Buen Fin 2025: descuentos especiales en figuras seleccionadas | Promoción válida solo por tiempo limitado | ¡Aprovecha antes de que se agoten! 🎉
+      </Marquee>
       {/* marquee */}
-      <marquee>
-        <p>Envios a todo México    |    Costo de envio $160MXN por hasta un kilo de peso    |    Entregas personales los domingos en Mundo Divertido (Tijuana)</p>
-      </marquee>
+      <Marquee className="bg-background py-2 text-sm text-foreground">
+        <p>
+          Envios a todo México | Costo de envio $160MXN por hasta un kilo de peso | Entregas personales los domingos en
+          Mundo Divertido (Tijuana)
+        </p>
+      </Marquee>
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background py-16 md:py-24 lg:py-32">
         {/* Background Image with Zoom-out Animation */}
         <div className="absolute inset-0 z-0">
@@ -102,6 +109,9 @@ export default async function HomePage() {
                   price={product.price}
                   imageUrl={product.image_url}
                   stock={product.stock}
+                  salePrice={product.sale_price}
+                  saleActive={product.sale_active}
+                  salePercentage={product.sale_percentage}
                 />
               ))}
             </div>

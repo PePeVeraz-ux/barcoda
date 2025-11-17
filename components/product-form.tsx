@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,6 +15,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Upload, X, Loader2 } from "lucide-react"
 import { MultiImageUpload } from "@/components/multi-image-upload"
+import { createProduct, ProductServiceError, ProductPayload, updateProduct } from "@/lib/services/product-service"
 
 interface Category {
   id: string
@@ -53,7 +53,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [uploadProgress, setUploadProgress] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -169,8 +168,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         }
       }
 
-      console.log("💾 Guardando producto en Supabase...")
-      const productData = {
+      console.log("💾 Guardando producto...")
+      const productData: ProductPayload = {
         name,
         description: description || null,
         price: Number.parseFloat(price),
@@ -184,14 +183,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       if (product) {
         // Update existing product
         console.log("🔄 Actualizando producto existente...")
-        const { error, data } = await supabase.from("products").update(productData).eq("id", product.id).select()
+        await updateProduct(product.id, productData)
 
-        if (error) {
-          console.error("❌ Error de Supabase:", error)
-          throw error
-        }
-
-        console.log("✅ Producto actualizado:", data)
+        console.log("✅ Producto actualizado")
         toast({
           title: "Producto actualizado",
           description: "El producto se actualizó correctamente",
@@ -199,19 +193,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       } else {
         // Create new product
         console.log("➕ Creando nuevo producto...")
-        
-        const { error, data } = await supabase.from("products").insert(productData).select()
 
-        if (error) {
-          console.error("❌ Error de Supabase:", error)
-          console.error("❌ Código de error:", error.code)
-          console.error("❌ Detalles:", error.details)
-          console.error("❌ Hint:", error.hint)
-          console.error("❌ Message:", error.message)
-          throw error
-        }
+        await createProduct(productData)
 
-        console.log("✅ Producto creado:", data)
+        console.log("✅ Producto creado")
         toast({
           title: "Producto creado",
           description: "El producto se creó correctamente",
@@ -226,7 +211,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       }, 500)
     } catch (error) {
       console.error("❌ Error completo:", error)
-      const errorMessage = error instanceof Error ? error.message : "No se pudo guardar el producto"
+      const errorMessage = error instanceof ProductServiceError || error instanceof Error ? error.message : "No se pudo guardar el producto"
       toast({
         title: "Error",
         description: errorMessage,

@@ -68,7 +68,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <Badge variant="secondary">{product.categories?.name}</Badge>
               </div>
               <h1 className="text-4xl font-bold tracking-tight">{product.name}</h1>
-              <p className="mt-4 text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+              {product.sale_active && product.sale_price && product.sale_price < product.price ? (
+                <div className="mt-4 flex flex-col">
+                  <p className="text-3xl font-bold text-primary">${product.sale_price.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground line-through">${product.price.toFixed(2)}</p>
+                  {product.sale_percentage && (
+                    <Badge variant="secondary" className="mt-1 w-fit bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100">
+                      -{Math.round(product.sale_percentage)}%
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+              )}
               <p className="mt-2 text-sm text-muted-foreground">
                 {product.stock > 0 ? `${product.stock} unidades disponibles` : "Sin stock"}
               </p>

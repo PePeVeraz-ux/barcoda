@@ -62,6 +62,9 @@ export default async function SearchPage({
                   price={product.price}
                   imageUrl={product.image_url}
                   stock={product.stock}
+                  salePrice={product.sale_price}
+                  saleActive={product.sale_active}
+                  salePercentage={product.sale_percentage}
                 />
               </div>
             ))}

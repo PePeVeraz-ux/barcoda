@@ -8,7 +8,7 @@ const MAX_WEIGHT_PER_BOX = 1 // 1 kg por caja
 interface CartItem {
   quantity: number
   products: {
-    weight: number
+    weight?: number | null
   }
 }
 

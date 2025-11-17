@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,15 +9,12 @@ import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { calculateShipping } from "@/lib/shipping"
 
 interface CheckoutFormProps {
   cartId: string
-  cartItems: any[]
-  total: number
 }
 
-export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
+export function CheckoutForm({ cartId }: CheckoutFormProps) {
   const [fullName, setFullName] = useState("")
   const [address, setAddress] = useState("")
   const [city, setCity] = useState("")
@@ -27,146 +23,72 @@ export function CheckoutForm({ cartId, cartItems, total }: CheckoutFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cartId,
+          fullName,
+          address,
+          city,
+          postalCode,
+          phone,
+        }),
+      })
 
-      if (!user) {
+      if (response.status === 401) {
         router.push("/auth/login")
         return
       }
 
-      // Validar stock antes de crear la orden
-      const stockValidation = await fetch("/api/validate-cart-stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId }),
-      })
+      const data = await response.json()
 
-      const stockResult = await stockValidation.json()
+      if (!response.ok) {
+        if (response.status === 409 && Array.isArray(data.issues)) {
+          const issueMessages = data.issues
+            .map((issue: any) => `${issue.productName}: solicitaste ${issue.requested}, disponibles: ${issue.available}`)
+            .join(" | ")
 
-      if (!stockResult.valid) {
-        const issueMessages = stockResult.issues
-          .map((issue: any) => 
-            `${issue.productName}: solicitaste ${issue.requested}, disponibles: ${issue.available}`
-          )
-          .join(" | ")
+          toast({
+            title: "Stock insuficiente",
+            description: issueMessages,
+            variant: "destructive",
+          })
+
+          setTimeout(() => {
+            router.push("/cart")
+          }, 2000)
+          return
+        }
 
         toast({
-          title: "Stock insuficiente",
-          description: issueMessages,
+          title: "Error",
+          description: data?.message || "No se pudo procesar tu orden",
           variant: "destructive",
         })
-        
-        // Redirigir al carrito para que actualice y vea el problema
-        setTimeout(() => {
-          router.push("/cart")
-        }, 2000)
         return
       }
 
-      // Calcular detalles de envío
-      const shipping = calculateShipping(cartItems)
-      const subtotal = total - shipping.cost
-
-      // Create order with shipping information
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          total,
-          shipping_cost: shipping.cost,
-          shipping_weight: shipping.totalWeight,
-          shipping_boxes: shipping.boxes,
-          status: "pending",
-          shipping_name: fullName,
-          shipping_address: address,
-          shipping_city: city,
-          shipping_postal_code: postalCode,
-          shipping_phone: phone,
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // Create order items and update stock
-      const orderItems = cartItems.map((item) => ({
-        order_id: order.id,
-        product_id: item.products.id,
-        quantity: item.quantity,
-        price: item.products.price,
-      }))
-
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
-
-      if (itemsError) throw itemsError
-
-      // Actualizar stock de productos
-      for (const item of cartItems) {
-        const { data: product } = await supabase
-          .from("products")
-          .select("stock")
-          .eq("id", item.products.id)
-          .single()
-
-        if (product) {
-          await supabase
-            .from("products")
-            .update({ stock: Math.max(0, product.stock - item.quantity) })
-            .eq("id", item.products.id)
-        }
-      }
-
-      // Clear cart items
-      const { error: clearError } = await supabase.from("cart_items").delete().eq("cart_id", cartId)
-
-      if (clearError) throw clearError
-
-      // Prepare WhatsApp message
-      const productsText = cartItems
-        .map(
-          (item) =>
-            `- ${item.products.name} x${item.quantity} ($${(Number(item.products.price) * item.quantity).toFixed(2)})`
-        )
-        .join("\n")
-
-      const whatsappMessage = encodeURIComponent(
-        `¡Hola! Quiero confirmar mi pedido:\n\n` +
-          `📦 Orden #${order.id.slice(0, 8)}\n\n` +
-          `🛍️ Productos:\n${productsText}\n\n` +
-          `💵 Resumen:\n` +
-          `Subtotal: $${subtotal.toFixed(2)}\n` +
-          `Envío: $${shipping.cost.toFixed(2)} (${shipping.boxes} caja(s), ${shipping.totalWeight.toFixed(2)}kg)\n` +
-          `💰 Total: $${total.toFixed(2)}\n\n` +
-          `📍 Datos de envío:\n` +
-          `Nombre: ${fullName}\n` +
-          `Dirección: ${address}\n` +
-          `Ciudad: ${city}\n` +
-          `Código Postal: ${postalCode}\n` +
-          `Teléfono: ${phone}`
-      )
-
-      // WhatsApp number (configure in environment variables)
-      const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491234567890"
+      const whatsappNumber: string = data.whatsappNumber || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5491234567890"
+      const whatsappMessage: string = data.whatsappMessage
 
       toast({
         title: "Orden creada",
         description: "Serás redirigido a WhatsApp para confirmar el pago",
       })
 
-      // Redirect to WhatsApp
       setTimeout(() => {
-        window.open(`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`, "_blank")
+        if (whatsappMessage) {
+          window.open(`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`, "_blank")
+        }
+        window.dispatchEvent(new Event('cart-updated'))
         router.push("/orders")
-        // No usar router.refresh() para evitar que el navbar pierda estado
       }, 1500)
     } catch (error) {
       console.error("[v0] Error creating order:", error)

@@ -2,90 +2,131 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { Package } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { calculateShipping } from "@/lib/shipping"
+import { Package, Percent } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 interface CartSummaryProps {
   cartId: string
-  initialSubtotal: number
-  initialShipping: {
-    cost: number
-    boxes: number
-    totalWeight: number
-    isFree: boolean
-    details: string
-  }
-  initialTotal: number
-  initialItemCount: number
+  subtotal: number
+  discount: number
+  couponCode: string
+  itemCount: number
+  isRefreshing?: boolean
 }
 
-export function CartSummary({ cartId, initialSubtotal, initialShipping, initialTotal, initialItemCount }: CartSummaryProps) {
-  const [subtotal, setSubtotal] = useState(initialSubtotal)
-  const [shipping, setShipping] = useState(initialShipping)
-  const [total, setTotal] = useState(initialTotal)
-  const [itemCount, setItemCount] = useState(initialItemCount)
-  const supabase = createClient()
-
-  const updateSummary = useCallback(async () => {
-    const { data: cartItems } = await supabase
-      .from("cart_items")
-      .select("quantity, products(price, weight)")
-      .eq("cart_id", cartId)
-
-    if (cartItems && cartItems.length > 0) {
-      const newSubtotal = cartItems.reduce((sum, item: any) => {
-        return sum + (Number(item.products?.price || 0) * item.quantity)
-      }, 0)
-      const newShipping = calculateShipping(cartItems as any)
-      const newTotal = newSubtotal + newShipping.cost
-      
-      setSubtotal(newSubtotal)
-      setShipping(newShipping)
-      setTotal(newTotal)
-      setItemCount(cartItems.length)
-    } else {
-      setSubtotal(0)
-      setShipping({ cost: 0, boxes: 0, totalWeight: 0, isFree: true, details: "" })
-      setTotal(0)
-      setItemCount(0)
-    }
-  }, [cartId, supabase])
+export function CartSummary({ cartId, subtotal, discount, couponCode, itemCount, isRefreshing = false }: CartSummaryProps) {
+  const [inputCode, setInputCode] = useState(couponCode)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
-    // Escuchar evento custom
-    const handleCartUpdate = () => {
-      updateSummary()
-    }
-    window.addEventListener('cart-updated', handleCartUpdate)
+    setInputCode(couponCode)
+  }, [couponCode])
 
-    // Realtime backup
-    const channel = supabase
-      .channel("cart_summary_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cart_items",
-          filter: `cart_id=eq.${cartId}`,
-        },
-        () => {
-          updateSummary()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      window.removeEventListener('cart-updated', handleCartUpdate)
-      supabase.removeChannel(channel)
-    }
-  }, [cartId, supabase, updateSummary])
-
-  if (itemCount === 0) {
+  if (!cartId || itemCount === 0) {
     return null
+  }
+
+  const subtotalAfterDiscount = Math.max(0, subtotal - discount)
+  const isBusy = isSubmitting || isRefreshing
+
+  const applyCoupon = async () => {
+    if (!inputCode.trim()) {
+      toast({
+        title: "Ingresa un cupón",
+        description: "Escribe un código antes de aplicar",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      if (!cartId) {
+        throw new Error("No se encontró el carrito")
+      }
+
+      const response = await fetch("/api/coupons/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: inputCode.trim(), cartId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Cupón no válido",
+          description: data.message || "Revisa las condiciones del cupón",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setInputCode((data.couponCode || inputCode).toUpperCase())
+
+      toast({
+        title: "Cupón aplicado",
+        description: data.message || "El descuento se aplicó correctamente",
+      })
+
+      window.dispatchEvent(new Event('cart-updated'))
+    } catch (error) {
+      console.error("Error applying coupon", error)
+      toast({
+        title: "Error",
+        description: "No se pudo aplicar el cupón. Intenta de nuevo",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const removeCoupon = async () => {
+    setIsSubmitting(true)
+    try {
+      if (!cartId) {
+        throw new Error("No se encontró el carrito")
+      }
+
+      const response = await fetch("/api/coupons/apply", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        toast({
+          title: "No se pudo remover",
+          description: data.message || "Intenta nuevamente",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setInputCode("")
+
+      toast({
+        title: "Cupón removido",
+        description: "El descuento fue eliminado del carrito",
+      })
+
+      window.dispatchEvent(new Event('cart-updated'))
+    } catch (error) {
+      console.error("Error removing coupon", error)
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el cupón",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -94,28 +135,61 @@ export function CartSummary({ cartId, initialSubtotal, initialShipping, initialT
         <CardTitle>Resumen de Compra</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <label htmlFor="coupon-code" className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1">
+              <Percent className="h-3 w-3" /> Cupón de descuento
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="coupon-code"
+                value={inputCode}
+                onChange={(event) => setInputCode(event.target.value.toUpperCase())}
+                placeholder="BF2024"
+                className="uppercase"
+                disabled={isSubmitting}
+              />
+              <Button type="button" onClick={applyCoupon} disabled={isSubmitting || !inputCode.trim()}>
+                Aplicar
+              </Button>
+            </div>
+            {couponCode && (
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Cupón aplicado: <strong>{couponCode}</strong></span>
+                <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={removeCoupon} disabled={isSubmitting}>
+                  Quitar
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal ({itemCount} productos)</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+              <span>Descuento</span>
+              <span>- ${discount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <div className="flex items-center gap-1">
               <Package className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Envío</span>
             </div>
-            <div className="text-right">
-              <div>${shipping.cost.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground">
-                {shipping.boxes} caja(s) - {shipping.totalWeight.toFixed(2)}kg
-              </div>
+            <div className="text-xs text-muted-foreground text-right max-w-[160px]">
+              El costo del envío se determinará por WhatsApp
             </div>
           </div>
-          <div className="border-t pt-2">
+          <div className="border-t pt-2 space-y-1">
             <div className="flex justify-between font-bold text-lg">
-              <span>Total</span>
-              <span className="text-primary">${total.toFixed(2)}</span>
+              <span>Total (sin envío)</span>
+              <span className="text-primary">${subtotalAfterDiscount.toFixed(2)}</span>
             </div>
+            <p className="text-xs text-muted-foreground text-right">El envío se cotiza individualmente.</p>
           </div>
         </div>
 

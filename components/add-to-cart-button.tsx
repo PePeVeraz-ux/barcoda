@@ -1,11 +1,12 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { addCartItem, CartServiceError } from "@/lib/services/cart-service"
 
 interface AddToCartButtonProps {
   productId: string
@@ -16,7 +17,7 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
+  const { user } = useAuth()
 
   const handleAddToCart = async () => {
     setIsLoading(true)
@@ -32,10 +33,6 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
     }, 10000) // 10 segundos
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
       if (!user) {
         clearTimeout(timeoutId)
         setIsLoading(false)
@@ -43,58 +40,10 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
         return
       }
 
-      // VALIDACIÓN PREVIA: Verificar cantidad actual en carrito
-      const { data: cart } = await supabase
-        .from("carts")
-        .select("id")
-        .eq("user_id", user.id)
-        .single()
-
-      if (cart) {
-        const { data: existingItem } = await supabase
-          .from("cart_items")
-          .select("quantity")
-          .eq("cart_id", cart.id)
-          .eq("product_id", productId)
-          .single()
-
-        if (existingItem && existingItem.quantity >= stock) {
-          clearTimeout(timeoutId)
-          toast({
-            title: "Stock insuficiente",
-            description: `Solo hay ${stock} unidad(es) disponible(s) y ya tienes ${existingItem.quantity} en tu carrito`,
-            variant: "destructive",
-          })
-          setIsLoading(false)
-          return
-        }
-      }
-
-      // Usar API route con validación de stock
-      const response = await fetch("/api/add-to-cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, userId: user.id }),
-      })
-
-      const result = await response.json()
+      await addCartItem(productId)
 
       clearTimeout(timeoutId)
 
-      if (!response.ok) {
-        if (response.status === 409) {
-          // Stock insuficiente
-          toast({
-            title: "Stock insuficiente",
-            description: result.message || "No hay suficiente stock disponible",
-            variant: "destructive",
-          })
-        } else {
-          throw new Error(result.error || "Error al agregar al carrito")
-        }
-        return
-      }
-      
       toast({
         title: "Producto agregado",
         description: "El producto se agregó a tu carrito",
@@ -104,12 +53,26 @@ export function AddToCartButton({ productId, stock }: AddToCartButtonProps) {
       window.dispatchEvent(new Event('cart-updated'))
     } catch (error) {
       clearTimeout(timeoutId)
-      console.error("[v0] Error adding to cart:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo agregar el producto al carrito",
-        variant: "destructive",
-      })
+      console.error("[cart] Error adding to cart:", error)
+
+      if (error instanceof CartServiceError) {
+        if (error.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+
+        toast({
+          title: error.status === 409 ? "Stock insuficiente" : "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo agregar el producto al carrito",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoading(false)
     }

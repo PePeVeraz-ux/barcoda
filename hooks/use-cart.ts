@@ -1,13 +1,12 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { useCallback, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { addCartItem, CartServiceError, deleteCartItem, updateCartItemQuantity } from "@/lib/services/cart-service"
 
 export function useCart() {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-  const supabase = createClient()
 
   const addToCart = useCallback(async (productId: string) => {
     setIsLoading(true)
@@ -23,58 +22,7 @@ export function useCart() {
     }, 10000)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        clearTimeout(timeoutId)
-        setIsLoading(false)
-        return { success: false, needsAuth: true }
-      }
-
-      // Get or create cart
-      let { data: cart } = await supabase
-        .from("carts")
-        .select("id")
-        .eq("user_id", user.id)
-        .single()
-
-      if (!cart) {
-        const { data: newCart, error: cartError } = await supabase
-          .from("carts")
-          .insert({ user_id: user.id })
-          .select("id")
-          .single()
-
-        if (cartError) throw cartError
-        cart = newCart
-      }
-
-      // Check if item already in cart
-      const { data: existingItem } = await supabase
-        .from("cart_items")
-        .select("id, quantity")
-        .eq("cart_id", cart.id)
-        .eq("product_id", productId)
-        .single()
-
-      if (existingItem) {
-        // Update quantity
-        const { error } = await supabase
-          .from("cart_items")
-          .update({ quantity: existingItem.quantity + 1 })
-          .eq("id", existingItem.id)
-
-        if (error) throw error
-      } else {
-        // Add new item
-        const { error } = await supabase.from("cart_items").insert({
-          cart_id: cart.id,
-          product_id: productId,
-          quantity: 1,
-        })
-
-        if (error) throw error
-      }
+      await addCartItem(productId)
 
       clearTimeout(timeoutId)
       
@@ -87,50 +35,62 @@ export function useCart() {
     } catch (error) {
       clearTimeout(timeoutId)
       console.error("Error adding to cart:", error)
+
+      if (error instanceof CartServiceError) {
+        toast({
+          title: error.status === 409 ? "Stock insuficiente" : "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+
+        return { success: false, needsAuth: error.status === 401 }
+      }
+
       toast({
         title: "Error",
         description: "No se pudo agregar el producto al carrito",
         variant: "destructive",
       })
+
       return { success: false, needsAuth: false }
     } finally {
       setIsLoading(false)
     }
-  }, [supabase, toast])
+  }, [toast])
 
   const updateQuantity = useCallback(async (itemId: string, newQuantity: number) => {
     setIsLoading(true)
     try {
-      const { error } = await supabase
-        .from("cart_items")
-        .update({ quantity: newQuantity })
-        .eq("id", itemId)
-
-      if (error) throw error
+      await updateCartItemQuantity(itemId, newQuantity)
 
       return { success: true }
     } catch (error) {
       console.error("Error updating quantity:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la cantidad",
-        variant: "destructive",
-      })
+
+      if (error instanceof CartServiceError) {
+        toast({
+          title: error.status === 409 ? "Stock insuficiente" : "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la cantidad",
+          variant: "destructive",
+        })
+      }
+
       return { success: false }
     } finally {
       setIsLoading(false)
     }
-  }, [supabase, toast])
+  }, [toast])
 
   const removeItem = useCallback(async (itemId: string) => {
     setIsLoading(true)
     try {
-      const { error } = await supabase
-        .from("cart_items")
-        .delete()
-        .eq("id", itemId)
-
-      if (error) throw error
+      await deleteCartItem(itemId)
 
       toast({
         title: "Producto eliminado",
@@ -140,16 +100,26 @@ export function useCart() {
       return { success: true }
     } catch (error) {
       console.error("Error removing item:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el producto",
-        variant: "destructive",
-      })
+
+      if (error instanceof CartServiceError) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el producto",
+          variant: "destructive",
+        })
+      }
+
       return { success: false }
     } finally {
       setIsLoading(false)
     }
-  }, [supabase, toast])
+  }, [toast])
 
   return {
     isLoading,

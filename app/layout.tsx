@@ -5,6 +5,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
+import { WishlistProvider } from "@/contexts/wishlist-context"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -58,10 +59,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Navbar />
-            {children}
-            <Footer />
-            <Toaster />
+            <WishlistProvider>
+              <Navbar />
+              {children}
+              <Footer />
+              <Toaster />
+            </WishlistProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

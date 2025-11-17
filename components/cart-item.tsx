@@ -9,19 +9,10 @@ import { useState, memo } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import type { CartItem as SnapshotItem } from "@/lib/services/cart-service"
 
 interface CartItemProps {
-  item: {
-    id: string
-    quantity: number
-    products: {
-      id: string
-      name: string
-      price: number
-      image_url: string
-      stock: number
-    }
-  }
+  item: SnapshotItem
   cartId: string
 }
 
@@ -29,6 +20,17 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
   const [quantity, setQuantity] = useState(item.quantity)
   const { isLoading, updateQuantity: updateQty, removeItem: removeFromCart } = useCart()
   const { toast } = useToast()
+
+  const getUnitPrice = () => {
+    const basePrice = Number(item.products.price) || 0
+    const salePrice = Number(item.products?.sale_price)
+    const isSaleActive = Boolean(item.products?.sale_active && Number.isFinite(salePrice) && salePrice > 0 && salePrice < basePrice)
+    return {
+      unitPrice: Number((isSaleActive ? salePrice : basePrice).toFixed(2)),
+      isSaleActive,
+      basePrice,
+    }
+  }
 
   const updateQuantity = async (newQuantity: number) => {
     if (newQuantity < 1) return
@@ -63,6 +65,8 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
     window.dispatchEvent(new Event('cart-updated'))
   }
 
+  const { unitPrice, isSaleActive, basePrice } = getUnitPrice()
+
   return (
     <div className="flex gap-4 border-b pb-4 last:border-0 last:pb-0">
       <Link
@@ -82,7 +86,14 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
           <Link href={`/products/${item.products.id}`} className="font-semibold hover:text-primary transition-colors">
             {item.products.name}
           </Link>
-          <p className="text-lg font-bold text-primary mt-1">${Number(item.products.price).toFixed(2)}</p>
+          <div className="mt-1 text-lg font-bold text-primary">
+            ${unitPrice.toFixed(2)}
+          </div>
+          {isSaleActive && (
+            <p className="text-sm text-muted-foreground line-through">
+              ${basePrice.toFixed(2)}
+            </p>
+          )}
           
           {/* Alerta de stock */}
           {item.products.stock === 0 && (
@@ -141,7 +152,12 @@ export const CartItem = memo(function CartItem({ item, cartId }: CartItemProps) 
       </div>
 
       <div className="flex flex-col items-end justify-between">
-        <p className="text-lg font-bold">${(Number(item.products.price) * quantity).toFixed(2)}</p>
+        <div className="text-lg font-bold text-primary">${(unitPrice * quantity).toFixed(2)}</div>
+        {isSaleActive && (
+          <p className="text-xs text-muted-foreground line-through">
+            ${(basePrice * quantity).toFixed(2)}
+          </p>
+        )}
         <Button
           variant="ghost"
           size="icon"

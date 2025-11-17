@@ -1,6 +1,5 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -17,6 +16,7 @@ import { Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { deleteProduct, ProductServiceError } from "@/lib/services/product-service"
 
 interface DeleteProductButtonProps {
   productId: string
@@ -27,15 +27,12 @@ export function DeleteProductButton({ productId, productName }: DeleteProductBut
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
 
   const handleDelete = async () => {
     setIsLoading(true)
 
     try {
-      const { error } = await supabase.from("products").delete().eq("id", productId)
-
-      if (error) throw error
+      await deleteProduct(productId)
 
       toast({
         title: "Producto eliminado",
@@ -45,10 +42,13 @@ export function DeleteProductButton({ productId, productName }: DeleteProductBut
       // Redirigir sin refresh para evitar que el navbar pierda estado
       router.push("/admin/products")
     } catch (error) {
-      console.error("[v0] Error deleting product:", error)
+      console.error("[admin] Error deleting product:", error)
+
+      const message = error instanceof ProductServiceError || error instanceof Error ? error.message : "No se pudo eliminar el producto"
+
       toast({
         title: "Error",
-        description: "No se pudo eliminar el producto",
+        description: message,
         variant: "destructive",
       })
     } finally {
