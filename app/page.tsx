@@ -15,9 +15,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <Marquee className="bg-gradient-to-r from-red-600 via-zinc-900 to-red-600 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white md:text-sm">
-        🎉 Buen Fin 2025: descuentos especiales en figuras seleccionadas | Promoción válida solo por tiempo limitado | ¡Aprovecha antes de que se agoten! 🎉
-      </Marquee>
       {/* marquee */}
       <Marquee className="bg-background py-2 text-sm text-foreground">
         <p>
